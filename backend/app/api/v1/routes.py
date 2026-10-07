@@ -43,6 +43,7 @@ async def ingest_document(
 
     try:
         return await index_pdf(
+            access_token=current_user["access_token"],
             user_id=current_user["id"],
             filename=file.filename or "document.pdf",
             file_bytes=file_bytes,
@@ -65,12 +66,11 @@ async def semantic_search(
     request: RetrievalRequest,
     current_user: dict = Depends(get_current_user),
 ):
-    # Authentication is enforced here. The Supabase RPC further scopes
-    # retrieval to auth.uid() once the user's JWT is propagated.
-    _ = current_user
-
     try:
-        return await retrieve(request)
+        return await retrieve(
+            access_token=current_user["access_token"],
+            request=request,
+        )
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
