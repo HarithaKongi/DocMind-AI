@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     supabase_url: str = ""
     supabase_key: str = ""
 
+    embedding_api_key: str = ""
+    embedding_api_url: str = "https://api.openai.com/v1/embeddings"
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dimensions: int = 1536
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
