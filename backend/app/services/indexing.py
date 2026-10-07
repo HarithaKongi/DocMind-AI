@@ -5,12 +5,13 @@ from app.services.ingestion import ingest_pdf
 
 
 async def index_pdf(
+    access_token: str,
     user_id: str,
     filename: str,
     file_bytes: bytes,
 ) -> dict:
-    document_repository = SupabaseDocumentRepository()
-    vector_store = SupabaseVectorStore()
+    document_repository = SupabaseDocumentRepository(access_token)
+    vector_store = SupabaseVectorStore(access_token)
 
     result = ingest_pdf(
         filename=filename,
@@ -37,9 +38,7 @@ async def index_pdf(
                 "chunk_index": chunk.chunk_index,
                 "content": chunk.content,
                 "page_number": chunk.page_number,
-                "metadata": {
-                    "source": chunk.source,
-                },
+                "metadata": {"source": chunk.source},
             }
             for chunk in result.chunks
         ]
