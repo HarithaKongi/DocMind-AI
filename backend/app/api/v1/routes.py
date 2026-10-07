@@ -1,6 +1,9 @@
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
-from app.services.ingestion import ingest_pdf
+from app.api.dependencies import get_current_user
+from app.schemas.retrieval import RetrievalRequest, RetrievalResponse
+from app.services.indexing import index_pdf
+from app.services.retrieval import retrieve
 
 router = APIRouter()
 
@@ -20,7 +23,10 @@ async def status() -> dict[str, str]:
 
 
 @router.post("/documents/ingest", tags=["documents"])
-async def ingest_document(file: UploadFile = File(...)):
+async def ingest_document(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
     if file.content_type != "application/pdf":
         raise HTTPException(
             status_code=415,
@@ -36,14 +42,39 @@ async def ingest_document(file: UploadFile = File(...)):
         )
 
     try:
-        result = ingest_pdf(
+        return await index_pdf(
+            user_id=current_user["id"],
             filename=file.filename or "document.pdf",
             file_bytes=file_bytes,
         )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=422,
-            detail=f"Unable to process PDF: {exc}",
+            detail=f"Unable to index PDF: {exc}",
         ) from exc
 
-    return result
+
+@router.post(
+    "/retrieval/search",
+    response_model=RetrievalResponse,
+    tags=["retrieval"],
+)
+async def semantic_search(
+    request: RetrievalRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    # Authentication is enforced here. The Supabase RPC further scopes
+    # retrieval to auth.uid() once the user's JWT is propagated.
+    _ = current_user
+
+    try:
+        return await retrieve(request)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unable to perform semantic search: {exc}",
+        ) from exc
