@@ -1,7 +1,12 @@
-from app.core.supabase import get_supabase_client
+from supabase import Client
+
+from app.core.supabase import get_user_supabase_client
 
 
 class SupabaseDocumentRepository:
+    def __init__(self, access_token: str) -> None:
+        self.client: Client = get_user_supabase_client(access_token)
+
     async def create(
         self,
         user_id: str,
@@ -9,10 +14,8 @@ class SupabaseDocumentRepository:
         file_size: int,
         page_count: int,
     ) -> str:
-        client = get_supabase_client()
-
         response = (
-            client.table("documents")
+            self.client.table("documents")
             .insert(
                 {
                     "user_id": user_id,
@@ -35,9 +38,7 @@ class SupabaseDocumentRepository:
         status: str,
         error_message: str | None = None,
     ) -> None:
-        client = get_supabase_client()
-
-        client.table("documents").update(
+        self.client.table("documents").update(
             {
                 "status": status,
                 "error_message": error_message,
