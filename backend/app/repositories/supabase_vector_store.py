@@ -1,9 +1,14 @@
-from app.core.supabase import get_supabase_client
-from app.schemas.retrieval import RetrievedChunk
+from supabase import Client
+
+from app.core.supabase import get_user_supabase_client
 from app.repositories.vector_store import VectorStore
+from app.schemas.retrieval import RetrievedChunk
 
 
 class SupabaseVectorStore(VectorStore):
+    def __init__(self, access_token: str) -> None:
+        self.client: Client = get_user_supabase_client(access_token)
+
     async def add_chunks(
         self,
         document_id: str,
@@ -25,8 +30,7 @@ class SupabaseVectorStore(VectorStore):
             for chunk, embedding in zip(chunks, embeddings)
         ]
 
-        client = get_supabase_client()
-        client.table("document_chunks").insert(rows).execute()
+        self.client.table("document_chunks").insert(rows).execute()
 
     async def similarity_search(
         self,
@@ -34,9 +38,7 @@ class SupabaseVectorStore(VectorStore):
         top_k: int,
         document_ids: list[str] | None = None,
     ) -> list[RetrievedChunk]:
-        client = get_supabase_client()
-
-        response = client.rpc(
+        response = self.client.rpc(
             "match_document_chunks",
             {
                 "query_embedding": query_embedding,
