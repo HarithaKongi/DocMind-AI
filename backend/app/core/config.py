@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     supabase_key: str = ""
 
     # Gemini Embeddings 2 — free-tier capable, 1536 dimensions.
-    embedding_api_key: str = ""
+    gemini_embedding_api_key: str = ""
     embedding_api_url: str = "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-2:batchEmbedContents"
     embedding_model: str = "gemini-embedding-2"
     embedding_dimensions: int = 1536
