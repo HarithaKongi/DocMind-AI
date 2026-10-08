@@ -91,17 +91,36 @@ function Dashboard({ email }: { email: string }) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error("Your session has expired. Please sign in again.");
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+      // Production backend. Keep the environment variable as an override for
+      // future environments, but never fall back to localhost in production.
+      const apiUrl =
+        process.env.NEXT_PUBLIC_API_URL ||
+        "https://docmind-ai-iyg7.onrender.com";
+
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch(apiUrl + "/api/v1/documents/ingest", {
-        method: "POST",
-        headers: { Authorization: "Bearer " + session.access_token },
-        body: formData,
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.detail ?? "Document ingestion failed.");
+      let response: Response;
+      try {
+        response = await fetch(apiUrl.replace(/\\/$/, "") + "/api/v1/documents/ingest", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + session.access_token },
+          body: formData,
+        });
+      } catch {
+        throw new Error(
+          "Cannot reach the DocMind API. Please refresh once and try again."
+        );
+      }
+
+      const contentType = response.headers.get("content-type") ?? "";
+      const data = contentType.includes("application/json")
+        ? await response.json()
+        : { detail: await response.text() };
+
+      if (!response.ok) {
+        throw new Error(data.detail ?? "Document ingestion failed.");
+      }
 
       setStatus("Indexed successfully: " + (data.filename ?? file.name) + ". " + (data.chunk_count ?? 0) + " chunks are ready.");
       setFile(null);
