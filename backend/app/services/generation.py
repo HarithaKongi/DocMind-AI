@@ -2,6 +2,7 @@ import httpx
 
 from app.core.config import settings
 from app.schemas.chat import Citation, ChatRequest, ChatResponse
+from app.schemas.retrieval import RetrievalRequest
 from app.services.retrieval import retrieve
 
 INSUFFICIENT_EVIDENCE = (
@@ -103,7 +104,11 @@ def _build_citations(results) -> list[Citation]:
 
 
 async def chat(access_token: str, request: ChatRequest) -> ChatResponse:
-    retrieval_request = request.model_copy(update={"query": request.question})
+    retrieval_request = RetrievalRequest(
+        query=request.question,
+        document_ids=request.document_ids,
+        top_k=request.top_k,
+    )
     retrieval_response = await retrieve(
         access_token=access_token,
         request=retrieval_request,
