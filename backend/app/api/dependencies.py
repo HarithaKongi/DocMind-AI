@@ -1,7 +1,8 @@
+import httpx
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
-from app.core.supabase import get_supabase_client
+from app.core.config import settings
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -17,25 +18,51 @@ async def get_current_user(
 
     access_token = credentials.credentials
 
+    if not settings.supabase_url or not settings.supabase_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Supabase is not configured.",
+        )
+
     try:
-        client = get_supabase_client()
-        response = client.auth.get_user(access_token)
-    except Exception as exc:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.get(
+                f"{settings.supabase_url.rstrip('/')}/auth/v1/user",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "apikey": settings.supabase_key,
+                },
+            )
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Unable to reach Supabase Auth.",
+        ) from exc
+
+    if response.status_code != 200:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired authentication token.",
+        )
+
+    try:
+        user = response.json()
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Supabase authentication response.",
         ) from exc
 
-    user = response.user
+    user_id = user.get("id")
 
-    if user is None:
+    if not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token.",
         )
 
     return {
-        "id": str(user.id),
-        "email": user.email,
+        "id": str(user_id),
+        "email": user.get("email"),
         "access_token": access_token,
     }
