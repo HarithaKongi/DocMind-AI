@@ -21,6 +21,8 @@ class EmbeddingProvider(ABC):
 
 
 class HostedEmbeddingProvider(EmbeddingProvider):
+    """Gemini Embedding 2 provider using Google's REST API."""
+
     def __init__(
         self,
         api_key: str,
@@ -42,11 +44,17 @@ class HostedEmbeddingProvider(EmbeddingProvider):
             return []
 
         if not self.api_key:
-            raise RuntimeError("EMBEDDING_API_KEY is not configured.")
+            raise RuntimeError("GEMINI_EMBEDDING_API_KEY is not configured.")
 
         payload = {
-            "model": self.model,
-            "input": texts,
+            "requests": [
+                {
+                    "model": f"models/{self.model}",
+                    "content": {"parts": [{"text": text}]},
+                    "outputDimensionality": self.dimensions,
+                }
+                for text in texts
+            ]
         }
 
         response = await _post_embeddings(
@@ -55,18 +63,18 @@ class HostedEmbeddingProvider(EmbeddingProvider):
             payload,
         )
 
-        data = response.get("data", [])
+        data = response.get("embeddings", [])
 
         if len(data) != len(texts):
             raise RuntimeError(
-                "Embedding provider returned an unexpected number of vectors."
+                "Gemini returned an unexpected number of embedding vectors."
             )
 
-        vectors = [item["embedding"] for item in data]
+        vectors = [item.get("values", []) for item in data]
 
         if any(len(vector) != self.dimensions for vector in vectors):
             raise RuntimeError(
-                f"Expected {self.dimensions}-dimensional embeddings."
+                f"Expected {self.dimensions}-dimensional Gemini embeddings."
             )
 
         return vectors
@@ -78,7 +86,7 @@ async def _post_embeddings(
     payload: dict,
 ) -> dict:
     headers = {
-        "Authorization": f"Bearer {api_key}",
+        "x-goog-api-key": api_key,
         "Content-Type": "application/json",
     }
 
@@ -94,7 +102,7 @@ async def _post_embeddings(
         host = urlparse(api_url).netloc or "unknown-host"
         raise RuntimeError(
             f"Embedding request failed ({response.status_code}) at {host} "
-            f"for model {payload.get('model')}: {detail}"
+            f"for model {payload.get('requests', [{}])[0].get('model')}: {detail}"
         )
 
     try:
