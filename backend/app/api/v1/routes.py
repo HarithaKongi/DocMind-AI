@@ -24,6 +24,13 @@ async def status() -> dict[str, str]:
     return {"status": "ready"}
 
 
+@router.get("/diagnostics/supabase", tags=["system"])
+async def supabase_diagnostics() -> dict[str, object]:
+    from app.core.supabase import diagnose_supabase
+
+    return await diagnose_supabase()
+
+
 @router.post("/documents/ingest", tags=["documents"])
 async def ingest_document(
     file: UploadFile = File(...),
