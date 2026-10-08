@@ -12,8 +12,15 @@ class SupabaseDocumentRepository:
                   "page_count": page_count, "status": "processing"},
             params={"select": "id"},
         )
-        data = response.json()
-        if not data:
+        try:
+            data = response.json()
+        except ValueError as exc:
+            raise RuntimeError(
+                f"Supabase returned a non-JSON response while creating the document "
+                f"(status {response.status_code})."
+            ) from exc
+
+        if not data or not data[0].get("id"):
             raise RuntimeError("Supabase created no document row.")
         return str(data[0]["id"])
 
