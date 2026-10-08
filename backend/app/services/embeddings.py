@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from json import JSONDecodeError
 from urllib.parse import urlparse
 
 import httpx
@@ -89,14 +90,24 @@ async def _post_embeddings(
         )
 
     if response.is_error:
-        detail = response.text[:500]
+        detail = response.text[:500] or "<empty response body>"
         host = urlparse(api_url).netloc or "unknown-host"
         raise RuntimeError(
             f"Embedding request failed ({response.status_code}) at {host} "
             f"for model {payload.get('model')}: {detail}"
         )
 
-    return response.json()
+    try:
+        return response.json()
+    except (JSONDecodeError, ValueError) as exc:
+        host = urlparse(api_url).netloc or "unknown-host"
+        content_type = response.headers.get("content-type", "unknown")
+        body = response.text[:500] or "<empty response body>"
+        raise RuntimeError(
+            f"Embedding provider returned invalid JSON "
+            f"(status {response.status_code}, content-type {content_type}) "
+            f"at {host}: {body}"
+        ) from exc
 
 
 embedding_provider = HostedEmbeddingProvider(
