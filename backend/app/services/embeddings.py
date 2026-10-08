@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from urllib.parse import urlparse
 
 import httpx
 
@@ -26,9 +27,9 @@ class HostedEmbeddingProvider(EmbeddingProvider):
         model: str,
         dimensions: int,
     ) -> None:
-        self.api_key = api_key
-        self.api_url = api_url
-        self.model = model
+        self.api_key = api_key.strip().strip('"').strip("'")
+        self.api_url = api_url.strip().strip('"').strip("'")
+        self.model = model.strip().strip('"').strip("'")
         self._dimensions = dimensions
 
     @property
@@ -40,9 +41,7 @@ class HostedEmbeddingProvider(EmbeddingProvider):
             return []
 
         if not self.api_key:
-            raise RuntimeError(
-                "EMBEDDING_API_KEY is not configured."
-            )
+            raise RuntimeError("EMBEDDING_API_KEY is not configured.")
 
         payload = {
             "model": self.model,
@@ -91,8 +90,10 @@ async def _post_embeddings(
 
     if response.is_error:
         detail = response.text[:500]
+        host = urlparse(api_url).netloc or "unknown-host"
         raise RuntimeError(
-            f"Embedding provider request failed ({response.status_code}): {detail}"
+            f"Embedding request failed ({response.status_code}) at {host} "
+            f"for model {payload.get('model')}: {detail}"
         )
 
     return response.json()
