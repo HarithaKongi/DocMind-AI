@@ -37,7 +37,19 @@ FastAPI
 
 ## Status
 
-🚧 Initial architecture and repository foundation.
+🚧 Backend RAG foundation and the first frontend vertical slice are implemented.
+
+### Frontend vertical slice
+
+The `frontend/` application now provides:
+
+- Supabase email/password sign-up and sign-in
+- Authenticated dashboard
+- PDF-only upload validation
+- Automatic Supabase access-token forwarding to the FastAPI ingestion endpoint
+- Upload/indexing status feedback
+
+The frontend uses only the public Supabase client key. Never commit `.env` files or secret API keys.
 
 ## Author
 
