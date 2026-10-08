@@ -119,7 +119,7 @@ async def _post_embeddings(
 
 
 embedding_provider = HostedEmbeddingProvider(
-    api_key=settings.embedding_api_key,
+    api_key=settings.gemini_embedding_api_key,
     api_url=settings.embedding_api_url,
     model=settings.embedding_model,
     dimensions=settings.embedding_dimensions,
