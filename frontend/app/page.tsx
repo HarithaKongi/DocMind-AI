@@ -102,7 +102,7 @@ function Dashboard({ email }: { email: string }) {
 
       let response: Response;
       try {
-        response = await fetch(apiUrl.replace(/\\/$/, "") + "/api/v1/documents/ingest", {
+        response = await fetch(apiUrl.replace(/\/$/, "") + "/api/v1/documents/ingest", {
           method: "POST",
           headers: { Authorization: "Bearer " + session.access_token },
           body: formData,
