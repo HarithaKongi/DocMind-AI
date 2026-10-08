@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from app.api.dependencies import get_current_user
+from app.schemas.chat import ChatRequest, ChatResponse
 from app.schemas.retrieval import RetrievalRequest, RetrievalResponse
+from app.services.generation import chat
 from app.services.indexing import index_pdf
 from app.services.retrieval import retrieve
 
@@ -77,4 +79,27 @@ async def semantic_search(
         raise HTTPException(
             status_code=422,
             detail=f"Unable to perform semantic search: {exc}",
+        ) from exc
+
+
+@router.post(
+    "/chat",
+    response_model=ChatResponse,
+    tags=["chat"],
+)
+async def document_chat(
+    request: ChatRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        return await chat(
+            access_token=current_user["access_token"],
+            request=request,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unable to generate grounded answer: {exc}",
         ) from exc
