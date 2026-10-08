@@ -42,6 +42,7 @@ def get_supabase_rest_config(access_token: str) -> tuple[str, dict[str, str]]:
         "apikey": key,
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
+        "Prefer": "return=representation",
     }
 
 
